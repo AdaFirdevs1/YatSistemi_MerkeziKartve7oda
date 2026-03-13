@@ -1,0 +1,32 @@
+{
+    "idf.flashType": "UART",
+    "idf.portWin": "COM9",
+    "idf.customExtraVars": {
+        "IDF_TARGET": "esp32s3"
+    },
+    "idf.openOcdConfigs": [
+        "board/esp32s3-builtin.cfg"
+    ],
+    "files.associations": {
+        "waveshare_rgb_lcd_port.h": "c",
+        "lvgl_port.h": "c",
+        "lvgl.h": "c",
+        "lv_demos.h": "c",
+        "lv_demo_benchmark.h": "c",
+        "lv_examples.h": "c",
+        "esp_lcd_touch_gt911.h": "c",
+        "usrgeneral.h": "c",
+        "usrcan.h": "c",
+        "usrgraphicalinterface.h": "c",
+        "iosfwd": "c",
+        "usrgeneraldefines.h": "c",
+        "usrsocketspage.h": "c",
+        "usrtanklevelpage.h": "c",
+        "usrlightingpage.h": "c",
+        "usrsettingspage.h": "c",
+        "time.h": "c",
+        "string.h": "c",
+        "nvs_flash.h": "c"
+    },
+    "idf.currentSetup": "c:\\ESP\\idf\\v5.5.1\\esp-idf"
+}
