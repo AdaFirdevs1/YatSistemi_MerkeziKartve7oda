@@ -249,11 +249,9 @@ esp_err_t sendCanMessage(uint32_t m_canID, uint8_t* data, uint8_t length)
         txMessage.data[i] = 0x00;
     }
 
-    // Önce TX queue'yu temizle
-    twai_clear_transmit_queue();
     
     // Timeout artırıldı (1 saniye)
-    esp_err_t status = twai_transmit(&txMessage, pdMS_TO_TICKS(1000));
+    esp_err_t status = twai_transmit(&txMessage, pdMS_TO_TICKS(50));
 
     if (status != ESP_OK)
     {
@@ -542,7 +540,7 @@ void startCanCommunication(void)
         NULL,
         4,  // Orta priority
         &s_canMasterTaskHandle,
-        1   // Core 1'de çalıştır
+        0   // Core 0'de çalıştır
     );
     
     ESP_LOGI(tag, "CAN communication started with Dynamic ID Master");
