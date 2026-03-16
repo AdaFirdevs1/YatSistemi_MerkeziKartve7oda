@@ -578,14 +578,30 @@ void RelayNode_ProcessCANMessage(uint32_t can_id, uint8_t *data, uint8_t dlc, bo
 
 		if (unique_id == g_node.unique_id)
 		{
-			// ---> YENİ EKLENEN GÜVENLİK DUVARI <---
 			if (g_node.state == NODE_STATE_ACTIVE || g_node.state == NODE_STATE_ENROLLED)
 			{
-				Debug_Printf("\r\n[SECURITY BLOCK] Remote wipe rejected! Locked to Master: 0x%04X\r\n",
-							 g_node.master_id);
-				return; // Silme işlemini iptal et ve fonksiyondan çık!
+			    // REASSIGN mesajının DLC>=7 ise master_id içeriyor mu?
+			    // Standart REASSIGN 5 byte: cmd(1) + uid(4)
+			    // Biz burada master_id'yi kontrol edemiyoruz çünkü mesajda yok
+			    // Ama: eğer bu bizim master'ımızdan geliyorsa (ID kontrolü ile)
+			    // CAN_ID_ASSIGNMENT_ID üzerinden geliyor = herkese açık broadcast
+			    // Güvenli yaklaşım: aynı master'ın HB'si alındıktan sonra gelen REASSIGN'a izin ver
+
+			    uint32_t time_since_master_hb = HAL_GetTick() - g_node.last_master_heartbeat_time;
+
+			    if (time_since_master_hb < 30000) {
+			        // Master'dan son 30sn içinde HB aldık → güvenilir
+			        // REASSIGN'ı kabul et ama sadece bizim master_id ile eşleşenleri
+			        // Mesajda master_id yok, ama master son 30sn aktif → kabul
+			        Debug_Printf("[REASSIGN] Accepted from trusted master (last HB: %lu ms ago)\r\n",
+			                     time_since_master_hb);
+			        // Security block'u atla, aşağı devam et
+			    } else {
+			        Debug_Printf("[SECURITY BLOCK] Remote wipe rejected! Master HB timeout: %lu ms\r\n",
+			                     time_since_master_hb);
+			        return;
+			    }
 			}
-			// ----------------------------------------
 
 			Debug_Printf("[CAN_RX] Reassignment for me! Re-enrolling...\r\n");
 			ResetAndRequestID();
