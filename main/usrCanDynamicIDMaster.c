@@ -649,18 +649,20 @@ void handleHeartbeat(uint32_t unique_id, uint32_t heartbeat_id, uint32_t receive
     int node_index = findNodeByUniqueID(unique_id);
     
     if (node_index < 0) {
-        ESP_LOGW(TAG, "💓 Heartbeat from UNREGISTERED node: 0x%08lX", unique_id);
+        ESP_LOGW(TAG, "💓 Heartbeat from UNREGISTERED node: 0x%08lX - re-enrolling", unique_id);
         
-        uint16_t expected_master = (uint16_t)(g_master_state.master_id & 0xFFFF);
         uint16_t received_master = (uint16_t)(received_master_id & 0xFFFF);
+        uint16_t expected_master = (uint16_t)(g_master_state.master_id & 0xFFFF);
         
+        // Sadece bizim master'ımızdan gelen node'ları kabul et
         if (received_master == expected_master || received_master == 0) {
-            ESP_LOGI(TAG, "Node was ours, sending REASSIGN");
-            
-            // Doğrudan daha önce yazılmış hazır fonksiyonu kullanıyoruz:
-            sendReassignmentCommand(unique_id);
-        } else {
-            ESP_LOGD(TAG, "Node belongs to different master (0x%04X)", received_master);
+            // Heartbeat_id'den node type ve bilgileri çıkar
+            uint8_t device_type_byte = GET_DEVICE_TYPE(heartbeat_id);
+            node_type_t ntype = (device_type_byte == DEVICE_TYPE_RELAY) ? NODE_TYPE_RELAY :
+                                (device_type_byte == DEVICE_TYPE_LED)   ? NODE_TYPE_LED   :
+                                                                        NODE_TYPE_SENSOR;
+            ESP_LOGI(TAG, "Re-enrolling node 0x%08lX (type=0x%02X)", unique_id, device_type_byte);
+            handleIDRequest(unique_id, ntype);  // Normal kayıt akışını başlat
         }
         return;
     }
@@ -876,17 +878,13 @@ void updateDynamicIDMaster(void)
         {
             uint32_t time_since_heartbeat = current_time - node->last_heartbeat_time;
             
+            // Her 60sn'de bir uyarı logla ama silme
             if (time_since_heartbeat > 60000 && node->last_heartbeat_time != 0)
             {
-                ESP_LOGI(TAG, "Removing dead node: UID=0x%08lX", node->unique_id);
-                
-                removeNodeFromNVS(node->unique_id);
-
-                node->status = NODE_STATUS_FREE;
-                node->unique_id = 0;
-                node->assigned_can_id = 0;
-                node->last_heartbeat_time = 0;
-                node->retry_count = 0;
+                ESP_LOGW(TAG, "Node still LOST after %lu ms: UID=0x%08lX - waiting for reconnect",
+                        time_since_heartbeat / 1000, node->unique_id);
+                // Zamanı güncelle ki her 60sn'de bir log atsın, sürekli değil
+                node->last_heartbeat_time = current_time - 59000;
             }
         }
     }
