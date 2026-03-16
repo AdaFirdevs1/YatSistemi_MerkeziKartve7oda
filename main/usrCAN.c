@@ -96,93 +96,58 @@ void initCAN(void)
 
 esp_err_t sendCanMessage(uint32_t m_canID, uint8_t* data, uint8_t length)
 {
-    if (length > 8)
-    {
-        ESP_LOGE(tag, "Invalid CAN message length: %d", length);
-        return ESP_ERR_INVALID_ARG;
-    }
+    if (length > 8) return ESP_ERR_INVALID_ARG;
     
     twai_status_info_t status_info;
-    esp_err_t canState = twai_get_status_info(&status_info);
+    if (twai_get_status_info(&status_info) != ESP_OK) return ESP_FAIL;
 
-    if (canState != ESP_OK)
-    {
-        ESP_LOGE(tag, "❌ CAN get_status failed: %s", esp_err_to_name(canState));
+    // Sadece BUS-OFF'u handle et
+    if (status_info.state == TWAI_STATE_BUS_OFF) {
+        ESP_LOGW(tag, "🔄 BUS-OFF - recovery başlatılıyor");
+        twai_initiate_recovery();
         return ESP_FAIL;
     }
-
-    // --- DOĞRU VE GÜVENLİ KURTARMA BLOĞU ---
-    if (status_info.state == TWAI_STATE_BUS_OFF)
-    {
-        ESP_LOGW(tag, "🔄 CAN BUS-OFF Durumu! Donanımsal kurtarma başlatılıyor...");
-        twai_initiate_recovery(); // Sürücüyü silmez, donanımı güvenlice resetler
-        return ESP_FAIL;
-    }
-    else if (status_info.state == TWAI_STATE_RECOVERING)
-    {
-        ESP_LOGW(tag, "🔄 CAN kurtarılıyor, bekleniyor...");
+    
+    // RECOVERING ise kısaca bekle
+    if (status_info.state == TWAI_STATE_RECOVERING) {
         for (int i = 0; i < 10; i++) {
             vTaskDelay(pdMS_TO_TICKS(50));
             twai_get_status_info(&status_info);
-            // Kurtarma bitince state STOPPED olur
-            if (status_info.state == TWAI_STATE_STOPPED || status_info.state == TWAI_STATE_RUNNING) break;
+            if (status_info.state == TWAI_STATE_STOPPED || 
+                status_info.state == TWAI_STATE_RUNNING) break;
         }
     }
     
-    if (status_info.state == TWAI_STATE_STOPPED)
-    {
-        ESP_LOGI(tag, "▶️ CAN Durdurulmuş (STOPPED). Yeniden başlatılıyor...");
+    // STOPPED ise başlat
+    if (status_info.state == TWAI_STATE_STOPPED) {
         twai_start();
-    }
-
-    if (status_info.tx_error_counter >= 128)
-    {
-        ESP_LOGW(tag, "⚠️ CAN TX Hatası çok yüksek, kuyruk temizleniyor...");
-        twai_clear_transmit_queue();
-    }
-
-    if (status_info.state != TWAI_STATE_RUNNING && status_info.state != TWAI_STATE_STOPPED)
-    {
-        ESP_LOGE(tag, "❌ CAN Hazır Değil - Durum: %d", status_info.state);
-        return ESP_FAIL;
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
     
-    twai_message_t txMessage;
+    // RUNNING veya ERROR PASSIVE → göndermeye çalış (TEC kontrolü YOK)
+    if (status_info.state != TWAI_STATE_RUNNING) return ESP_FAIL;
+
+    // TEC bilgisini sadece logla, engelleme yapma
+    if (status_info.tx_error_counter >= 128) {
+        ESP_LOGD(tag, "⚠️ Error Passive (TEC=%d) - TX deneniyor", 
+                 status_info.tx_error_counter);
+    }
+
+    twai_message_t txMessage = {0};
     txMessage.identifier = m_canID;
     txMessage.data_length_code = length;
-
-    if (m_canID > 0x7FF) {
-        txMessage.flags = TWAI_MSG_FLAG_EXTD;
-        txMessage.extd = 1;
-    } else {
-        txMessage.flags = TWAI_MSG_FLAG_NONE;
-        txMessage.extd = 0;
-    }
-
-    for (int i = 0; i < length; i++)
-    {
-        txMessage.data[i] = data[i];
-    }
+    txMessage.extd = (m_canID > 0x7FF) ? 1 : 0;
+    txMessage.flags = txMessage.extd ? TWAI_MSG_FLAG_EXTD : TWAI_MSG_FLAG_NONE;
     
-    for (int i = length; i < 8; i++)
-    {
-        txMessage.data[i] = 0x00;
-    }
+    for (int i = 0; i < length; i++) txMessage.data[i] = data[i];
 
-    //twai_clear_transmit_queue();
-    
-    esp_err_t status = twai_transmit(&txMessage, pdMS_TO_TICKS(1000));
-
-    if (status != ESP_OK)
-    {
+    esp_err_t status = twai_transmit(&txMessage, pdMS_TO_TICKS(50));
+    if (status != ESP_OK) {
         ESP_LOGE(tag, "❌ CAN TX FAILED - ID: 0x%lX", m_canID);
-        return status;
     }
-    
-    ESP_LOGD(tag, "✅ CAN TX OK - ID: 0x%lX, DLC: %d", m_canID, length);
-
-    return ESP_OK;
+    return status;
 }
+
 
 esp_err_t sendCanHeader(uint32_t m_canID, uint32_t m_value)
 {
@@ -234,6 +199,8 @@ static void canReceiveTask(void *arg)
     {
         if (receiveCANMessage(&id, data, &dataLen) == ESP_OK)
         {
+            rx_count++;
+
             uint8_t cmd = dataLen > 0 ? data[0] : 0;
             
             // Merkezi protokol mesajları
@@ -300,7 +267,7 @@ static void canMasterTask(void *arg)
     ESP_LOGI(tag, "CAN Master Task started (CENTRAL MASTER MODE)");
     
     uint32_t last_central_hb = 0;
-    uint32_t last_status_req = 0; // Durum sorgusu için timer
+    uint32_t last_status_req = 2500; // Durum sorgusu için timer
     
     while (1)
     {
@@ -319,6 +286,7 @@ static void canMasterTask(void *arg)
             for (uint8_t i = 1; i <= MAX_ROOM_ID; i++) {
                 if (isRoomActive(i)) {
                     requestRoomStatus(i);
+                    vTaskDelay(pdMS_TO_TICKS(200));
                 }
             }
             last_status_req = current_time;
@@ -355,7 +323,7 @@ void startCanCommunication(void)
         NULL,
         4,
         &s_canMasterTaskHandle,
-        1
+        0
     );
     
     ESP_LOGI(tag, "CAN communication started - CENTRAL MASTER MODE");
