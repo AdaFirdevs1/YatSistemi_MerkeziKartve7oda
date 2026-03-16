@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/HP/Desktop/esp_oda2/components/espressif__esp_lcd_touch_gt911
+# Install script for directory: C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/components/espressif__esp_lcd_touch_gt911
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

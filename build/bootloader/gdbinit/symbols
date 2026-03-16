@@ -17,4 +17,4 @@ set confirm off
 set confirm on
 
 # Load application symbols
-file C:/Users/HP/Desktop/esp_oda2/build/bootloader/bootloader.elf
+file C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader/bootloader.elf

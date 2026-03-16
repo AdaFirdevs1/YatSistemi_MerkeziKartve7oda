@@ -10,18 +10,18 @@ if(NOT EXISTS "C:/ESP/idf/v5.5.1/esp-idf/components/bootloader/subproject")
   file(MAKE_DIRECTORY "C:/ESP/idf/v5.5.1/esp-idf/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "C:/Users/HP/Desktop/esp_oda2/build/bootloader"
-  "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix"
-  "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix/tmp"
-  "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix/src/bootloader-stamp"
-  "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix/src"
-  "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader"
+  "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix"
+  "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix/tmp"
+  "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix/src/bootloader-stamp"
+  "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix/src"
+  "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "C:/Users/HP/Desktop/esp_oda2/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

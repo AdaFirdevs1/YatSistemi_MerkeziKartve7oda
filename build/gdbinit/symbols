@@ -13,8 +13,8 @@ end
 
 # Load bootloader symbols
 set confirm off
-    add-symbol-file C:/Users/HP/Desktop/esp_oda2/build/bootloader/bootloader.elf
+    add-symbol-file C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader/bootloader.elf
 set confirm on
 
 # Load application symbols
-file C:/Users/HP/Desktop/esp_oda2/build/lvgl_porting.elf
+file C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/lvgl_porting.elf

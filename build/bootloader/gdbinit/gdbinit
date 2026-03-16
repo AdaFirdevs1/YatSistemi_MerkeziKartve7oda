@@ -1,2 +1,2 @@
-source C:/Users/HP/Desktop/esp_oda2/build/bootloader/gdbinit/symbols
-source C:/Users/HP/Desktop/esp_oda2/build/bootloader/gdbinit/connect
+source C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader/gdbinit/symbols
+source C:/Users/HP/Desktop/yat_sistemi_kodlar/esp32s3/build/bootloader/gdbinit/connect
